@@ -20,7 +20,7 @@ The propagation behavior is a direct consequence of how `ShellExecuteW` handles 
 ShellExecuteW(
     NULL,           // hwnd (parent window handle)
     NULL,           // lpOperation (open, edit, etc.)
-    L"wordpad.exe", // lpFile (the program to execute)
+    L"AnyBinary.exe", // lpFile (the program to execute)
     NULL,           // lpParameters (command-line arguments)
     NULL,           // lpDirectory (working directory)
     SW_SHOWNORMAL   // nShowCmd (window state)
