@@ -2,12 +2,14 @@
 ### LEPAD (Legacy Parameter Descent) -  Command-line parameters are automatically inherited and propagated through a sequence of binaries where each executable calls the next. The arguments provided to any binary in the sequence are carried forward unchanged through all remaining binaries, culminating in execution of the final command.
 
 <img width="936" height="807" alt="image" src="https://github.com/user-attachments/assets/dde40bb4-6a79-4eaa-9801-1c58a7e2d169" />
+*LEPAD chain execution showing argument propagation from first to last binary.*
+
 
 # LEPAD - Legacy Parameter Descent
 
 ## Description
 
-Command-line parameters are automatically inherited and propagated through a sequence of binaries where each executable calls the next. The arguments provided to **any** binary in the sequence are carried forward unchanged through all remaining binaries, culminating in execution of the final command.
+Command-line parameters are automatically inherited and propagated through a sequence of binaries where each executable calls the next. The arguments provided to **any** binary in the sequence are carried forward unchanged through all subsequent binaries, culminating in execution of the final command.
 
 ## Core Properties
 
@@ -21,7 +23,7 @@ The parameter inheritance mechanism works regardless of which binary in the chai
 
 - The first binary
 - The second binary
-- The sixth binary
+- The fifth binary
 - Any binary within the chain
 
 The arguments will always propagate forward from that point to the end.
@@ -36,6 +38,9 @@ Once arguments enter the chain at any position, they will continue to travel thr
 Binary 1 (with arguments) → Binary 2 → Binary 3 → Binary 4 (executes with arguments)
 
 ### Scenario B - Arguments at Third Binary
+Binary 1 (no arguments) → Binary 2 (no arguments) → Binary 3 (with arguments) → Binary 4 (executes with arguments)
+
+### Scenario C - Arguments at Last Binary
 Binary 1 → Binary 2 → Binary 3 → Binary 4 (with arguments, executes directly)
 
 
@@ -51,8 +56,8 @@ Binary 1 → Binary 2 → Binary 3 → Binary 4 (with arguments, executes direct
 ## Key Characteristics
 
 - Arguments only travel forward, never backward
-- Earlier binaries before the injection point remain unaffected
-- The final binary always receives the arguments
+- Binaries before the injection point remain unaffected and do not execute
+- The final binary always receives and executes the arguments
 - No argument modification occurs during propagation
 - The chain does not need to be started from the beginning
 
@@ -62,13 +67,13 @@ This behavior means an operator can:
 
 1. Pre-position a chain on a target system
 2. Later activate any binary within the chain with arguments
-3. Have those arguments reach the end of the chain
+3. Have those arguments reach and execute at the end of the chain
 4. Execute commands without starting from binary one
 
 The chain maintains its propagation capability regardless of entry point.
 
 ## Limitations
 
-- Arguments do not travel to binaries earlier in the chain
-- Each binary must be capable of launching the next
-- The chain length is fixed at deployment time
+- Arguments cannot travel to binaries earlier in the chain
+- Each binary must be capable of launching the next binary
+- The chain length is fixed at deployment time and cannot be dynamically extended
