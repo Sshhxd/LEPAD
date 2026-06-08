@@ -1,6 +1,7 @@
 # LEPAD
 ### LEPAD (Legacy Parameter Descent) -  Command-line parameters are automatically inherited and propagated through a sequence of binaries where each executable calls the next. The arguments provided to any binary in the sequence are carried forward unchanged through all remaining binaries, culminating in execution of the final command.
 
+<img width="936" height="807" alt="image" src="https://github.com/user-attachments/assets/dde40bb4-6a79-4eaa-9801-1c58a7e2d169" />
 
 # LEPAD - Legacy Parameter Descent
 
