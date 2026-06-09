@@ -1,14 +1,18 @@
 # LEPAD
-### LEPAD (Legacy Parameter Descent) -  Command-line parameters are automatically inherited and propagated through a sequence of binaries where each executable calls the next. The arguments provided to any binary in the sequence are carried forward unchanged through all remaining binaries, culminating in execution of the final command.
+
+### LEPAD (Legacy Parameter Descent) - Command-line parameters are automatically inherited and propagated through a sequence of binaries where each executable calls the next. The arguments provided to any binary in the sequence are carried forward unchanged through all remaining binaries, culminating in execution of the final command.
 
 <img width="936" height="807" alt="image" src="https://github.com/user-attachments/assets/dde40bb4-6a79-4eaa-9801-1c58a7e2d169" />
-*LEPAD chain execution showing argument propagation from first to last binary.*
 
-# LEPAD - Legacy Parameter Descent
+*LEPAD chain execution showing argument propagation. Arguments can enter at ANY binary and propagate forward to the end of the chain.*
+
+---
 
 ## Description
 
 Command-line parameters are automatically inherited and propagated through a sequence of binaries where each executable calls the next. The arguments provided to any binary in the sequence are carried forward unchanged through all subsequent binaries, culminating in execution of the final command.
+
+---
 
 ## Technical Background
 
@@ -26,6 +30,9 @@ ShellExecuteW(
     SW_SHOWNORMAL   // nShowCmd (window state)
 );
 ```
+
+**Note:** The same behavior can be achieved with `CreateProcess` by passing `GetCommandLine()` as the `lpCommandLine` parameter to the child process. Both methods produce identical propagation results.
+
 ### Why NULL Matters
 
 When `lpParameters` is `NULL`, the Windows API behaves as follows:
@@ -37,37 +44,33 @@ When `lpParameters` is `NULL`, the Windows API behaves as follows:
 
 ### The Patching Vector
 
-If the original binary contains a **hardcoded string** to an executable which is passed as the `lpFile` parameter. It could be used as:
+If the original binary contains a **hardcoded string** to an executable which is passed as the `lpFile` parameter, it can be used as:
 
-1. Copying the binary to a new location
-2. Replacing the hardcoded string with any other executable name (e.g., cmd.exe)
+1. Copy the binary to a new location
+2. Replace the hardcoded string with any other executable name (e.g., cmd.exe)
 3. The `NULL` `lpParameters` behavior remains unchanged
 
-This creates an argument forwarding primitive. Any arguments given to the patched binary are passed untouched to the target binary specified in `lpFile`.
+This creates an argument forwarding primitive. **Any arguments given to the patched binary are passed untouched to the target binary specified in `lpFile`.**
 
 ### Chain Construction
 
 When multiple copies of the binary are patched to point to each other:
 
-Binary 1 (patched to launch Binary 2)
-  ↓
-Binary 2 (patched to launch Binary 3)
-  ↓
-Binary 3 (patched to launch Binary 4)
-  ↓
-Binary 4 (patched to launch cmd.exe)
+`Binary 1 (patched to launch Binary 2) → Binary 2 (patched to launch Binary 3) → Binary 3 (patched to launch Binary 4) → Binary 4 (patched to launch cmd.exe)`
 
 Each link in the chain maintains the same `NULL` `lpParameters` behavior. Therefore, arguments provided to any binary in the chain will propagate through all remaining links.
 
 ### Why No Registry Changes Are Needed
 
-Known LOLBAS techniques for write.exe require modifying registry keys under **HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths\wordpad.exe** or **HKCU\Software\Classes\exefile**. These methods:
+Known LOLBAS techniques for write.exe require modifying registry keys under `HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths\wordpad.exe` or `HKCU\Software\Classes\exefile`. These methods:
 
 - Leave forensic evidence in the registry
 - Affect system-wide behavior
 - Require cleanup after execution
 
 **LEPAD requires no registry modifications.** The only changes are to the copied binary files themselves, which can be deleted after use.
+
+---
 
 ## Core Properties
 
@@ -84,34 +87,40 @@ The parameter inheritance mechanism works regardless of which binary in the chai
 - The fifth binary
 - Any binary within the chain
 
-The arguments will always propagate forward from that point to the end.
+**The arguments will always propagate forward from that point to the end.**
 
 ### Self-Healing Propagation
 
 Once arguments enter the chain at any position, they will continue to travel through all subsequent links. The final binary will always execute with the provided arguments, irrespective of how many copies exist in the chain or where the arguments were introduced.
 
+---
+
 ## Technical Flow
 
 ### Scenario A - Arguments at First Binary
 
-Binary 1 (with arguments) → Binary 2 → Binary 3 → Binary 4 (executes with arguments)
+`Binary 1 (with arguments) → Binary 2 → Binary 3 → Binary 4 (executes with arguments)`
 
 ### Scenario B - Arguments at Third Binary
 
-Binary 1 (no arguments) → Binary 2 (no arguments) → Binary 3 (with arguments) → Binary 4 (executes with arguments)
+`Binary 1 (no arguments) → Binary 2 (no arguments) → Binary 3 (with arguments) → Binary 4 (executes with arguments)`
 
 ### Scenario C - Arguments at Last Binary
 
-Binary 1 → Binary 2 → Binary 3 → Binary 4 (with arguments, executes directly)
+`Binary 1 → Binary 2 → Binary 3 → Binary 4 (with arguments, executes directly)`
+
+---
 
 ## Chain Behavior
 
-| Chain Length | Arguments Enter At | Result              |
-|--------------|-------------------|----------------------|
-| 3 copies | Position 1 | Propagates through 2 and 3      |
-| 5 copies | Position 3 | Propagates through 4 and 5      |
+| Chain Length | Arguments Enter At | Result |
+|--------------|-------------------|--------|
+| 3 copies | Position 1 | Propagates through 2 and 3 |
+| 5 copies | Position 3 | Propagates through 4 and 5 |
 | 10 copies | Position 7 | Propagates through 8, 9 and 10 |
-| Any length | Any position | Forward propagation to end  |
+| Any length | Any position | Forward propagation to end |
+
+---
 
 ## Key Characteristics
 
@@ -122,6 +131,39 @@ Binary 1 → Binary 2 → Binary 3 → Binary 4 (with arguments, executes direct
 - The chain does not need to be started from the beginning
 - No registry modifications required
 - Only the patched binary files are changed
+
+---
+
+## Detection Evasion Properties
+
+- No new processes are created beyond the chain itself
+- No inter-process communication (IPC) mechanisms are used (no pipes, sockets, or shared memory)
+- No registry modifications leave forensic traces
+- No files are written during execution (only read from deployed location)
+- Command-line arguments appear legitimate in each binary's context
+
+---
+
+## Limitations
+
+- Arguments cannot travel to binaries earlier in the chain
+- Each binary must be capable of launching the next binary
+- The chain length is fixed at deployment time and cannot be dynamically extended
+- Requires write access to a directory (e.g., Desktop, Temp, AppData)
+
+---
+
+## Etymology
+
+**LEPAD** stands for **Legacy Parameter Descent**.
+
+- **Legacy** - Referring to the "ancestor" or first process in the chain whose arguments are inherited
+- **Parameter** - The command-line arguments (`lpParameters` / `lpCommandLine`)
+- **Descent** - The downward propagation through generations of binaries
+
+The name reflects how arguments are passed from parent to child, generation after generation, like a bloodline through the Windows process tree.
+
+---
 
 ## Practical Implications
 
@@ -134,10 +176,3 @@ This behavior means an operator can:
 5. Leave no registry artifacts behind
 
 The chain maintains its propagation capability regardless of entry point.
-
-## Limitations
-
-- Arguments cannot travel to binaries earlier in the chain
-- Each binary must be capable of launching the next binary
-- The chain length is fixed at deployment time and cannot be dynamically extended
-- Requires write access to a directory (e.g., Desktop, Temp, AppData)
